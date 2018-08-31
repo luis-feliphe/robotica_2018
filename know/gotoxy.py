@@ -5,7 +5,7 @@
 #turlebot
 #./know/gotoxy.py
 #name
-#controlo
+#controlo, take_photo
 #active
 
 
@@ -46,6 +46,20 @@ global posicao
 posicao = None
 global posicao_master
 posicao_master = None
+global distancia
+distancia = None
+global start
+start = False
+
+def get_distance(scan):
+        temp = list (scan.ranges)
+        for n, i in enumerate (temp):
+                if math.isnan(i):
+                        temp[n] = 3
+        for i in range (0,len(temp)):
+                temp[i] = round (temp[i] * 100,1)
+        global distancia
+        distancia = temp
 
 def degrees(value):
 	return (value*180)/math.pi#math.degrees(value)#((value* 180.0)/math.pi)
@@ -80,6 +94,11 @@ def getDegreesFromOdom(w):
 def getxy (odom):
 	return round (odom.pose.pose.position.x,2), round ( odom.pose.pose.position.y,2), round (getDegreesFromOdom (odom),2)#degrees(yall)
 
+def start_act(value):
+	if str(value).count("start")>0:
+		global start
+		start = True
+
 #############
 # ROS SETUP #
 #############
@@ -92,13 +111,14 @@ myId = sys.argv[1].replace("robot_", "")
 
 
 robot = sys.argv[1]#,sys.argv[2],sys.argv[3], sys.argv[4]
-rospy.init_node(str(robot)+"_gotoB")
+rospy.init_node(str(robot)+"_chack_obstacle")
 rospy.Subscriber(robot+"/odom", Odometry, getpos)
-rospy.Subscriber("/robot_0/odom", Odometry, getpos2)
+rospy.Subscriber("/robot_0/odom", Odometry, get_master_pos)
 finish = rospy.Publisher(robot+"/working", Bool)
 #p = rospy.Publisher(robot+"/cmd_vel_mux/input/teleop", Twist)
 p = rospy.Publisher(robot+"/cmd_vel", Twist)
-
+rospy.Subscriber(robot + "/base_scan", LaserScan, get_distance)
+rospy.Subscriber("/help_photo", String, start_act)
 r = rospy.Rate(RATE) # 5hz
 
 
@@ -122,22 +142,22 @@ tempoInicial = getTime()
 try:
 	algoritmo = Controlo()
 	while not rospy.is_shutdown():
-		if hasDataToWalk() and posicao_master != None:
-			x, y , mx, my, mz = getDataFromRos()
-			x, y , z = getxy(posicao_master)
+		while start:
 			t= Twist()
-			x, y = points[cont]
-			lin,ang  = algoritmo.start(x, y, z, mx, my, mz)
-			if (lin == 0 and ang == 0):
-				cont= (cont + 1)%len (points)
-				if (cont == 0):
-					finish.publish(False)
-					sys.exit()
-			global saida
-			t.angular.z = ang
-			t.linear.x = lin
-			p.publish(t)
-		iteracoes += 1
+			global distancia
+			if (distancia!= None and min (distancia) < 80):
+				t.angular.z, t.linear.x = 0,0
+				p.publish(t)
+			elif hasDataToWalk() and posicao_master != None:
+				x, y , mx, my, mz = getDataFromRos()
+				x, y , z = getxy(posicao_master)
+				y -=0.4
+				x -=0.4
+				lin,ang  = algoritmo.start(x, y, z, mx, my, mz)
+				t.angular.z = ang
+				t.linear.x = lin
+				p.publish(t)
+			iteracoes += 1
 		r.sleep()
 
 except Exception :

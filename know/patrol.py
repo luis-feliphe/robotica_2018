@@ -109,6 +109,7 @@ finish = rospy.Publisher(robot+"/working", Bool)
 #----- Robô simulado -----
 rospy.Subscriber("/robot_0/base_scan", LaserScan, get_distance)
 p = rospy.Publisher(robot+"/cmd_vel", Twist)
+pphoto = rospy.Publisher("/help_photo", String)
 
 
 
@@ -142,6 +143,7 @@ try:
 				mensagem = False
 				t.angular.z, t.linear.x = 0,0
 				p.publish (t)
+				pphoto.publish("start")
 				print "Obstáculo encontrado."
 			#realiza-se a chamada que pede ajuda ao proximo robo
 		elif hasDataToWalk():

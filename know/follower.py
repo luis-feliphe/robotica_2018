@@ -187,7 +187,7 @@ try:
 			global contPontos
 			x, y, z, mx, my, mz = getDataFromRos()
 			t= Twist()
-			print "Indo para " + str (x) + ":" + str (y) + ":" + str (z) +  " Estando em " + str (my)+ ":" +  str (my) + ":" +  str (my)
+#			print "Indo para " + str (x) + ":" + str (y) + ":" + str (z) +  " Estando em " + str (my)+ ":" +  str (my) + ":" +  str (my)
 			lin,ang  = algoritmo.start(x,y, z, mx, my, mz)
 			t.angular.z = ang
 			t.linear.x = lin

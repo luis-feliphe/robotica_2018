@@ -5,7 +5,7 @@
 #turlebot
 #./know/take_photo.py
 #name
-#controlo, findme
+#controlo
 #active
 
 
