@@ -29,26 +29,39 @@ def log (string):
 
 class Subconcious:
 
+
+#patrol, Controlo, follower, gotoxy, avoidance, take_photo
+
+
 	def __init__(self):
 		''' Settings '''
+		self.rule = 0
 		os.system("rm ./know/Controlo.pyc")
 		os.system("rm ./knowledge.pyc")
 		#if im robot 1
-		if sys.argv[1].count ("1")>0:
+		if sys.argv[1].count ("0")>0:
+			self.rule = 1
 			print "Im robot 1"
-			os.system("rm ./know/Controlo.py")
-			os.system("rm ./know/folower.py")
-			os.system("rm ./know/movaAparaB.py")
+			os.system("rm ./know/take_photo.py")
+			os.system("rm ./know/move_around.py")
 		#if Im robot 2
-		elif sys.argv[1].count ("2")>0:
+		elif sys.argv[1].count ("1")>0:
 			print "Im robot 2"
-			os.system("rm ./know/findme.py")
-			os.system("rm ./know/folower.py")
+			self.rule = 2
+			os.system("rm ./know/take_photo.py")
+			os.system("rm ./know/follower.py")
+			os.system("rm ./know/patrol.py")
+			os.system("rm ./know/gotoxy.py")
+			os.system("rm ./know/Controlo.py")
 		#if Im robot 3
-		elif sys.argv[1].count ("3")>0:
+		elif sys.argv[1].count ("2")>0:
+			self.rule = 3
 			print "Im robot 3"
 			os.system("rm ./know/Controlo.py")
-			os.system("rm ./know/findme.py")
+			os.system("rm ./know/gotoxy.py")
+			os.system("rm ./know/patrol.py")
+			os.system("rm ./know/follower.py")
+			os.system("rm ./know/move_around.py")
 
 		#variables
 		self.working = False
@@ -103,20 +116,26 @@ class Subconcious:
 		while not rospy.is_shutdown():
 			cont += 1
 			if not self.working:
+				if (self.rule == 1):
+					self.run ("patrol")
+				elif (self.rule == 2):
+					self.run ("follower")
+				elif (self.rule==3):
+					self.run ("gotoxy")
 				#if len (self.shared_knowledge ) <= len (self.knowledge):
-				work = random.randint (1,2) # 1 - compartilha qualquer  conhecimento;2 - realiza uma tarefa; 3 - pede para aprender alguma coisa; 
-				if work <2:
-					if (len (self.last_shared) < len (self.knowledge)):
-						name = random.choice(self.knowledge)
-						while str(name.name) in self.last_shared:
-							name=random.choice(self.knowledge)
-						self.share_knowledge(name.name)
-						
-					else:
-						self.last_shared = []
-						self.share_knowledge("any")
-				elif work ==2:
-					self.run("any")
+#				work = random.randint (1,2) # 1 - compartilha qualquer  conhecimento;2 - realiza uma tarefa; 3 - pede para aprender alguma coisa; 
+#				if work <2:
+#					if (len (self.last_shared) < len (self.knowledge)):
+#						name = random.choice(self.knowledge)
+#						while str(name.name) in self.last_shared:
+#							name=random.choice(self.knowledge)
+#						self.share_knowledge(name.name)
+#						
+#					else:
+#						self.last_shared = []
+#						self.share_knowledge("any")
+#				elif work ==2:
+#					self.run("any")
 			self.r.sleep()
 			#Eu tenho objetivo?
 			#Eu devo aprender algo?
@@ -139,8 +158,11 @@ class Subconcious:
 		if task == "any" and len (self.knowledge) == 0:
 			log ( "i dont know nothing")
 			return 
-		elif (task == "any"):
-			temp = random.choice (self.knowledge)
+		elif (task == "any" or self.has (task)):
+			if task == "any":
+				temp = random.choice (self.knowledge)
+			else:
+				temp = self.has(task)
 #			todos = ""
 #			for name in self.knowledge:
 #				todos = todos + " " + name.name
@@ -151,23 +173,40 @@ class Subconcious:
 				return
 			# check if task have all dependencies
 			ok = 0
-			for dep in temp.dependences:
-				for kno in self.knowledge:
-					if dep == kno.name:
-						ok = ok + 1
-			if ok != len (temp.dependences):
-				log ("Missing Dependences: " + str (temp.name)+  " = " + str (temp.dependences))
+			resting_dep = temp.dependences
+			my_know = []
+			missing_dep = []
+			for i in self.knowledge:
+				my_know.append(i.name)
+			for i in resting_dep:
+				if i not in my_know:
+					missing_dep.append(i)
+#			for dep in resting_dep:
+#				for kno in self.knowledge:
+#					if dep == kno.name:
+#						ok = ok + 1
+#			if ok != len (temp.dependences):
+			if len (missing_dep) > 0 :
+				log ("Missing Dependences: " + str (missing_dep)+ ", asking for one of them")
+				request = str(self.rule) + " "+ str (missing_dep[0])
+				self.pask.publish(request)	
 				return 
 			args = self.organize_args (temp)
 			log ("Starting to run : " + str (temp.name))# + str (temp.type))
 			os.system("python -W ignore "+ temp.arquivo+" " + args + " &")
 			self.working = True
 		else:
+			performed = False
 			for i in self.knowledge:
 				if i.name == task:
 					args = self.organize_args (i)
 					os.system("python -W ignore "+ i.arquivo + " " + args + " &")
+					performed= True
 					self.working = True
+			if not performed:
+				request = str(self.rule) + " " + str(task)
+#				print "impossible to find this task, asking for it: " + str (request)
+				self.pask.publish(request)
 				
 
 
@@ -235,8 +274,11 @@ class Subconcious:
 
 	def handle_requests(self, ask):
 		''' You are listening requests for knowledge, if you have it, you will share  - Esta função administra pedidos de ensino de conhecimento'''
-		if self.has(ask) != None:
-			self.share_knowledge(self.has(ask))
+		behavior = str(ask).split(" ")[2].replace(" ","")
+		if int (str(ask).split(" ")[1]) == self.rule:
+			return False #asking for myself
+		if self.has(behavior) != None:
+			self.share_knowledge(behavior)
 			return True
 		return False
 
@@ -262,6 +304,8 @@ class Subconcious:
 			for line in data:
 				resp = resp+line
 			self.pknow.publish(resp)
+			return 
+		print "Not shared, I dont have it"
 
 	def has(self, knowledge):
 		for task in self.knowledge:

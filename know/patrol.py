@@ -5,7 +5,7 @@
 #turlebot
 #./know/movaIparaJ.py
 #name
-#controlo, findme
+#controlo
 #active
 
 
@@ -107,7 +107,7 @@ finish = rospy.Publisher(robot+"/working", Bool)
 #p = rospy.Publisher(robot+"/cmd_vel_mux/input/teleop", Twist)
 #rospy.Subscriber(str(robot)+"/scan", LaserScan, get_distance)
 #----- Robô simulado -----
-rospy.Subscriber("/robot_1/base_scan", LaserScan, get_distance)
+rospy.Subscriber("/robot_0/base_scan", LaserScan, get_distance)
 p = rospy.Publisher(robot+"/cmd_vel", Twist)
 
 
@@ -135,20 +135,25 @@ tempoInicial = getTime()
 try:
 	algoritmo = Controlo()
 	while not rospy.is_shutdown():
+		t= Twist()
 		global distancia
 		if (distancia!= None and min (distancia) < 100):
 			if (mensagem):
 				mensagem = False
+				t.angular.z, t.linear.x = 0,0
+				p.publish (t)
 				print "Obstáculo encontrado."
 			#realiza-se a chamada que pede ajuda ao proximo robo
 		elif hasDataToWalk():
 			x, y , mx, my, mz = getDataFromRos()
-			t= Twist()
 			x, y, z  = points[cont]
 			lin,ang  = algoritmo.start(x,y, z, mx, my, mz)
 			if (lin == 0 and ang == 0):
 				cont= (cont + 1)%len (points)
 				if (cont == 0):
+					t.angular.z = 0
+					t.linear.x = 0
+					p.publish (t)
 					finish.publish(False)
 					sys.exit()
 			global saida

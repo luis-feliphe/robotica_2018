@@ -3,9 +3,9 @@
 #cmd_vel, base_pose_ground_truth
 #Robot move from I to J
 #turlebot
-#./know/movaIparaJ.py
+#./know/gotoxy.py
 #name
-#controlo, findme
+#controlo
 #active
 
 
@@ -44,13 +44,18 @@ RATE=6
 
 global posicao
 posicao = None
-
+global posicao_master
+posicao_master = None
 
 def degrees(value):
 	return (value*180)/math.pi#math.degrees(value)#((value* 180.0)/math.pi)
 def getpos(odom):
 	global posicao
 	posicao= odom
+def get_master_pos(odom):
+	global posicao_master
+	posicao_master= odom
+
 
 def hasDataToWalk():
 	global posicao
@@ -89,8 +94,10 @@ myId = sys.argv[1].replace("robot_", "")
 robot = sys.argv[1]#,sys.argv[2],sys.argv[3], sys.argv[4]
 rospy.init_node(str(robot)+"_gotoB")
 rospy.Subscriber(robot+"/odom", Odometry, getpos)
+rospy.Subscriber("/robot_0/odom", Odometry, getpos2)
 finish = rospy.Publisher(robot+"/working", Bool)
-p = rospy.Publisher(robot+"/cmd_vel_mux/input/teleop", Twist)
+#p = rospy.Publisher(robot+"/cmd_vel_mux/input/teleop", Twist)
+p = rospy.Publisher(robot+"/cmd_vel", Twist)
 
 r = rospy.Rate(RATE) # 5hz
 
@@ -108,34 +115,6 @@ cont = 0
 posInicialx=0
 posInicialy=0
 
-#Esperar resposta (verificar se estamos em A)
-
-global inplace
-inplace = None
-def mypos(pos):
-        global inplace
-        place = ''.join(e for e in str(pos) if e.isalpha())
-        if place.count("I") > 0:
-                inplace = True
-        else:
-                inplace = False
-
-rospy.Subscriber( robot+ "/place",  String , mypos)
-
-os.system("python -W ignore ./know/findme.py "+ robot + " &")
-while not inplace:
-        if inplace == False:
-		finish.publish(False)
-		print '\033[91m' + "Not in place"
-                sys.exit()
-        r.sleep()
-
-
-
-
-
-
-
 
 
 iteracoes = 1.0
@@ -143,11 +122,12 @@ tempoInicial = getTime()
 try:
 	algoritmo = Controlo()
 	while not rospy.is_shutdown():
-		if hasDataToWalk():
+		if hasDataToWalk() and posicao_master != None:
 			x, y , mx, my, mz = getDataFromRos()
+			x, y , z = getxy(posicao_master)
 			t= Twist()
 			x, y = points[cont]
-			lin,ang  = algoritmo.start(str(myId),x, y, mx, my, mz)
+			lin,ang  = algoritmo.start(x, y, z, mx, my, mz)
 			if (lin == 0 and ang == 0):
 				cont= (cont + 1)%len (points)
 				if (cont == 0):

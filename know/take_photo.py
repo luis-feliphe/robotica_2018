@@ -1,74 +1,166 @@
+# -*- coding: utf-8 -*-
+#take_photo
+#cmd_vel, base_pose_ground_truth
+#Takes photo from an obstacle
+#turlebot
+#./know/take_photo.py
+#name
+#controlo, findme
+#active
 
-'''
-Copyright (c) 2016, Nadya Ampilogova
-All rights reserved.
-Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
-1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
-2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
-3. Neither the name of the copyright holder nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-'''
 
-# Script for simulation
-# Launch gazebo world prior to run this script
+######################################
+# This file simulate a robot on ROS. #
+# To use, you need to pass like      #
+# argument the numnber of robot,     #
+# like "./movingRobot 1"             #
+######################################
 
-from __future__ import print_function
-import sys
+
+from Controlo import Controlo
+#ROS  imports
 import rospy
-import cv2
+from geometry_msgs.msg import Twist
+from geometry_msgs.msg import Quaternion
+from nav_msgs.msg import Odometry
+from std_msgs.msg import Bool
 from std_msgs.msg import String
-from sensor_msgs.msg import Image
-from cv_bridge import CvBridge, CvBridgeError
+import os 
 
-class TakePhoto:
-    def __init__(self):
+import random
+import sys
+import time
+####
+from tf.transformations import euler_from_quaternion
+import tf
+import struct
+from datetime import datetime
+from sensor_msgs.msg import LaserScan
+getTime = lambda: int(round(time.time() * 1000))
 
-        self.bridge = CvBridge()
-        self.image_received = False
+import math
+RATE=6
 
-        # Connect image topic
-        img_topic = "camera/rgb/image_raw"
-        self.image_sub = rospy.Subscriber(img_topic, Image, self.callback)
 
-        # Allow up to one second to connection
-        rospy.sleep(1)
+global posicao
+posicao = None
 
-    def callback(self, data):
 
-        # Convert image to OpenCV format
-        try:
-            cv_image = self.bridge.imgmsg_to_cv2(data, "bgr8")
-        except CvBridgeError as e:
-            print(e)
+def degrees(value):
+	return (value*180)/math.pi#math.degrees(value)#((value* 180.0)/math.pi)
+def getpos(odom):
+	global posicao
+	posicao= odom
 
-        self.image_received = True
-        self.image = cv_image
+def hasDataToWalk():
+	global posicao
+	return posicao != None
 
-    def take_picture(self, img_title):
-        if self.image_received:
-            # Save an image
-            cv2.imwrite(img_title, self.image)
-            return True
+def getDataFromRos():
+	global posicao
+	x, y, z = 0, 0 ,0
+	mx, my, mz = getxy (posicao)
+	return x, y , mx, my, mz
+
+def getDegreesFromOdom(w):
+	#TODO: HOW CONVERT DATA TO ANGLES
+	q = [w.pose.pose.orientation.x,	w.pose.pose.orientation.y, w.pose.pose.orientation.z, w.pose.pose.orientation.w]       
+        euler_angles = euler_from_quaternion(q, axes='sxyz')
+	current_angle = euler_angles[2]
+	if current_angle < 0:
+		current_angle = 2 * math.pi + current_angle
+	return degrees(current_angle)
+		
+
+def getxy (odom):
+	return round (odom.pose.pose.position.x,2), round ( odom.pose.pose.position.y,2), round (getDegreesFromOdom (odom),2)#degrees(yall)
+
+#############
+# ROS SETUP #
+#############
+#Became a node, using the arg to decide what the number of robot
+global myId
+myId = sys.argv[1].replace("robot_", "")
+
+
+
+
+
+robot = sys.argv[1]#,sys.argv[2],sys.argv[3], sys.argv[4]
+rospy.init_node(str(robot)+"_gotoB")
+rospy.Subscriber(robot+"/odom", Odometry, getpos)
+finish = rospy.Publisher(robot+"/working", Bool)
+p = rospy.Publisher(robot+"/cmd_vel_mux/input/teleop", Twist)
+
+r = rospy.Rate(RATE) # 5hz
+
+
+######################
+# control stops ######
+######################
+
+#################
+#   Main Loop   #
+#################
+u= 1.5#0.75/2
+points = [(0, -2 * u)]
+cont = 0
+posInicialx=0
+posInicialy=0
+
+#Esperar resposta (verificar se estamos em A)
+
+global inplace
+inplace = None
+def mypos(pos):
+        global inplace
+        place = ''.join(e for e in str(pos) if e.isalpha())
+        if place.count("I") > 0:
+                inplace = True
         else:
-            return False
+                inplace = False
 
-if __name__ == '__main__':
+rospy.Subscriber( robot+ "/place",  String , mypos)
 
-    # Initialize
-    rospy.init_node('take_photo', anonymous=False)
-    camera = TakePhoto()
+os.system("python -W ignore ./know/findme.py "+ robot + " &")
+while not inplace:
+        if inplace == False:
+		finish.publish(False)
+		print '\033[91m' + "Not in place"
+                sys.exit()
+        r.sleep()
 
-    # Take a photo
 
-    # Use '_image_title' parameter from command line
-    # Default value is 'photo.jpg'
 
-    img_title = sys.argv[1] #rospy.get_param('~image_title', 'photo.jpg')
 
-    if camera.take_picture(img_title):
-        rospy.loginfo("Saved image " + img_title)
-    else:
-        rospy.loginfo("No images received")
 
-    # Sleep to give the last log messages time to be sent
-rospy.sleep(1)
+
+
+
+
+iteracoes = 1.0
+tempoInicial = getTime()
+try:
+	algoritmo = Controlo()
+	while not rospy.is_shutdown():
+		if hasDataToWalk():
+			x, y , mx, my, mz = getDataFromRos()
+			t= Twist()
+			x, y = points[cont]
+			lin,ang  = algoritmo.start(str(myId),x, y, mx, my, mz)
+			if (lin == 0 and ang == 0):
+				cont= (cont + 1)%len (points)
+				if (cont == 0):
+					finish.publish(False)
+					sys.exit()
+			global saida
+			t.angular.z = ang
+			t.linear.x = lin
+			p.publish(t)
+		iteracoes += 1
+		r.sleep()
+
+except Exception :
+	raise	
+	print ("Exception!\n")
+
