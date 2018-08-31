@@ -69,12 +69,15 @@ class Subconcious:
 		self.shared_knowledge= []
 		rospy.init_node('robot_concious_'+ sys.argv[1])
 		self.att={"name" : sys.argv[1], "None": ""}
-		self.pknow = rospy.Publisher('knowledge', String)
-		self.pask = rospy.Publisher('ask_knowledge', String)
+
+		self.pknow = rospy.Publisher('/knowledge', String)
+		self.pask = rospy.Publisher('/ask_knowledge', String)
 		self.finish = rospy.Publisher(sys.argv[1]+ "/working" , Bool)
-		rospy.Subscriber ("knowledge", String, self.receive_knowledge)
-		rospy.Subscriber ("ask_knowledge", String, self.handle_requests)
+
+		rospy.Subscriber ("/knowledge", String, self.receive_knowledge)
+		rospy.Subscriber ("/ask_knowledge", String, self.handle_requests)
 		rospy.Subscriber (sys.argv[1] + "/working", Bool, self.worker_process)
+
 		self.r = rospy.Rate (10)	
 		self.learn_from_file()
 		self.initialTime = getTime()
@@ -155,17 +158,13 @@ class Subconcious:
 
 	def run (self, task):
 		''' Run some task - Executa a tarefa '''
-		if task == "any" and len (self.knowledge) == 0:
+		if len (self.knowledge) == 0:
 			return 
 		elif (task == "any" or self.has (task)):
 			if task == "any":
 				temp = random.choice (self.knowledge)
 			else:
 				temp = self.has(task)
-#			todos = ""
-#			for name in self.knowledge:
-#				todos = todos + " " + name.name
-#			print ("TAREFAS ESCOLHIDA : "  + str (temp.name))
 			# check if task is passive or active
 			if (temp.type == "passive"):
 				log ( "Passive knowledge " + str (temp.name) + " " +str (temp.type) )
@@ -180,11 +179,6 @@ class Subconcious:
 			for i in resting_dep:
 				if i not in my_know:
 					missing_dep.append(i)
-#			for dep in resting_dep:
-#				for kno in self.knowledge:
-#					if dep == kno.name:
-#						ok = ok + 1
-#			if ok != len (temp.dependences):
 			if len (missing_dep) > 0 :
 				log ("Missing Dependences: " + str (missing_dep)+ ", asking for one of them")
 				request = str(self.rule) + " "+ str (missing_dep[0])
@@ -195,17 +189,17 @@ class Subconcious:
 			os.system("python -W ignore "+ temp.arquivo+" " + args + " &")
 			self.working = True
 		else:
-			performed = False
-			for i in self.knowledge:
-				if i.name == task:
-					args = self.organize_args (i)
-					os.system("python -W ignore "+ i.arquivo + " " + args + " &")
-					performed= True
-					self.working = True
-			if not performed:
-				request = str(self.rule) + " " + str(task)
-#				print "impossible to find this task, asking for it: " + str (request)
-				self.pask.publish(request)
+#			performed = False
+#			for i in self.knowledge:
+#				if i.name == task:
+#					args = self.organize_args (i)
+#					os.system("python -W ignore "+ i.arquivo + " " + args + " &")
+#					performed= True
+#					self.working = True
+#			if not performed:
+			request = str(self.rule) + " " + str(task)
+			print "impossible to find this task, asking for it: " + str (request)
+			self.pask.publish(request)
 				
 
 
