@@ -14,11 +14,11 @@ import math
 class Controlo :
 	def __init__ (self):
 #		#real turtlebot
-#		self.VEL_MAX= 0.1
-#		self.VEL_MAX_ANG=0.75
+		self.VEL_MAX= 0.1
+		self.VEL_MAX_ANG=0.75
 		#to simulation
-		self.VEL_MAX= 0.6
-		self.VEL_MAX_ANG=0.5
+#		self.VEL_MAX= 0.6
+#		self.VEL_MAX_ANG=0.5
 		self.lex= 0
 		self.lez= 0
 		self.ley= 0
