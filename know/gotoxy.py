@@ -112,13 +112,21 @@ myId = sys.argv[1].replace("robot_", "")
 
 robot = sys.argv[1]#,sys.argv[2],sys.argv[3], sys.argv[4]
 rospy.init_node(str(robot)+"_chack_obstacle")
-rospy.Subscriber(robot+"/odom", Odometry, getpos)
-rospy.Subscriber("/robot_0/odom", Odometry, get_master_pos)
+p  = None
 finish = rospy.Publisher(robot+"/working", Bool)
-#p = rospy.Publisher(robot+"/cmd_vel_mux/input/teleop", Twist)
-p = rospy.Publisher(robot+"/cmd_vel", Twist)
-rospy.Subscriber(robot + "/base_scan", LaserScan, get_distance)
 rospy.Subscriber("/help_photo", String, start_act)
+if False: #simulated
+	rospy.Subscriber(robot+"/odom", Odometry, getpos)
+	rospy.Subscriber("/robot_0/odom", Odometry, get_master_pos)
+	rospy.Subscriber(robot + "/base_scan", LaserScan, get_distance)
+	p = rospy.Publisher(robot+"/cmd_vel", Twist)
+else:#real robots
+	rospy.Subscriber(robot+"/odom", Odometry, getpos)
+	rospy.Subscriber("/robot_0/odom", Odometry, get_master_pos)
+	rospy.Subscriber(robot + "/scan", LaserScan, get_distance)
+	p = rospy.Publisher(robot+"/cmd_vel_mux/input/teleop", Twist)
+
+
 r = rospy.Rate(RATE) # 5hz
 
 
@@ -135,8 +143,7 @@ cont = 0
 posInicialx=0
 posInicialy=0
 
-
-
+has_photo = False
 iteracoes = 1.0
 tempoInicial = getTime()
 try:
@@ -148,6 +155,10 @@ try:
 			if (distancia!= None and min (distancia) < 80):
 				t.angular.z, t.linear.x = 0,0
 				p.publish(t)
+				if not has_photo:
+					file_name = "teste.jpg"
+					os.system("python take_photo.py " + str (file_name))
+
 			elif hasDataToWalk() and posicao_master != None:
 				x, y , mx, my, mz = getDataFromRos()
 				x, y , z = getxy(posicao_master)

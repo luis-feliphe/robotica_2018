@@ -159,16 +159,23 @@ def getxy (odom):
 #Became a node, using the arg to decide what the number of robot
 global myId
 myId = sys.argv[1].replace("robot_", "")
-
-
+	
 robot = sys.argv[1]#,sys.argv[2],sys.argv[3], sys.argv[4]
 rospy.init_node("robot_"+str(robot)+"_folower")
-rospy.Subscriber(robot+"/odom", Odometry, getpos)
-rospy.Subscriber("/robot_0/odom", Odometry, getleaderpos)
-finish = rospy.Publisher(robot+"/working", Bool)
-#p = rospy.Publisher(robot+"/cmd_vel_mux/input/teleop", Twist)
-p = rospy.Publisher(robot+"/cmd_vel", Twist)
+robot = None
+finish = None
+p = None
 
+if False: #simulated robots
+	rospy.Subscriber(robot+"/odom", Odometry, getpos)
+	rospy.Subscriber("/robot_0/odom", Odometry, getleaderpos)
+	finish = rospy.Publisher(robot+"/working", Bool)
+	p = rospy.Publisher(robot+"/cmd_vel", Twist)
+else: # real robots
+	rospy.Subscriber(robot+"/odom", Odometry, getpos)
+	rospy.Subscriber("/robot_0/odom", Odometry, getleaderpos)
+	finish = rospy.Publisher(robot+"/working", Bool)
+	p = rospy.Publisher(robot+"/cmd_vel_mux/input/teleop", Twist)
 
 r = rospy.Rate(RATE) # 5hz
 

@@ -101,15 +101,19 @@ myId = sys.argv[1].replace("robot_", "")
 
 robot = sys.argv[1]#,sys.argv[2],sys.argv[3], sys.argv[4]
 rospy.init_node(str(robot)+"leader")
-rospy.Subscriber(robot+"/odom", Odometry, getpos)
+p = None
+pphoto = None
 finish = rospy.Publisher(robot+"/working", Bool)
-# ---- Robô real ---------
-#p = rospy.Publisher(robot+"/cmd_vel_mux/input/teleop", Twist)
-#rospy.Subscriber(str(robot)+"/scan", LaserScan, get_distance)
-#----- Robô simulado -----
-rospy.Subscriber("/robot_0/base_scan", LaserScan, get_distance)
-p = rospy.Publisher(robot+"/cmd_vel", Twist)
 pphoto = rospy.Publisher("/help_photo", String)
+if False: #simulated
+	rospy.Subscriber(robot+"/odom", Odometry, getpos)
+	rospy.Subscriber("/robot_0/base_scan", LaserScan, get_distance)
+	p = rospy.Publisher(robot+"/cmd_vel", Twist)
+
+else:# ---- Robô real ---------
+	rospy.Subscriber("odom", Odometry, getpos)
+	p = rospy.Publisher("cmd_vel_mux/input/teleop", Twist)
+	rospy.Subscriber("scan", LaserScan, get_distance)
 
 
 

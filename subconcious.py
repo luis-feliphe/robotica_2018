@@ -25,7 +25,7 @@ DEBUG = True
 
 def log (string):
 	if DEBUG==True:
-		print '\033[93m' + "\n " + str (string) + '\033[0m'
+		print '\033[93m' + "\n "+ str(getTime()) + ":" + str (string) + '\033[0m'
 
 class Subconcious:
 
@@ -156,7 +156,6 @@ class Subconcious:
 	def run (self, task):
 		''' Run some task - Executa a tarefa '''
 		if task == "any" and len (self.knowledge) == 0:
-			log ( "i dont know nothing")
 			return 
 		elif (task == "any" or self.has (task)):
 			if task == "any":
@@ -245,7 +244,6 @@ class Subconcious:
 		if self.has(data[1].replace("#","").replace("\n", "")):
 			#log ("I already have this knowledge: " + str(data[1]))
 			return
-
 		nome = data[1].replace("#", "").replace ("\n","")
 		topicos = data[2].replace("#", "").replace ("\n","")
 		descricao = data [3].replace("#", "").replace ("\n","")
