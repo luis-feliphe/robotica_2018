@@ -162,7 +162,6 @@ myId = sys.argv[1].replace("robot_", "")
 	
 robot = sys.argv[1]#,sys.argv[2],sys.argv[3], sys.argv[4]
 rospy.init_node("robot_"+str(robot)+"_folower")
-robot = None
 finish = None
 p = None
 
