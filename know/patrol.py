@@ -111,9 +111,9 @@ if False: #simulated
 	p = rospy.Publisher(robot+"/cmd_vel", Twist)
 
 else:# ---- Robô real ---------
-	rospy.Subscriber("odom", Odometry, getpos)
-	p = rospy.Publisher("cmd_vel_mux/input/teleop", Twist)
-	rospy.Subscriber("scan", LaserScan, get_distance)
+	rospy.Subscriber(str(robot)+"/odom", Odometry, getpos)
+	p = rospy.Publisher(str(robot)+"/cmd_vel_mux/input/teleop", Twist)
+	rospy.Subscriber(str(robot)+"/scan", LaserScan, get_distance)
 
 
 

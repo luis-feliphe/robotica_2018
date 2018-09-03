@@ -162,7 +162,7 @@ try:
 			elif hasDataToWalk() and posicao_master != None:
 				x, y , mx, my, mz = getDataFromRos()
 				x, y , z = getxy(posicao_master)
-				y -=0.4
+#				y -=0.4
 				x -=0.4
 				lin,ang  = algoritmo.start(x, y, z, mx, my, mz)
 				t.angular.z = ang

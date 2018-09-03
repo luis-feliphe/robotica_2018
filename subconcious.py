@@ -18,7 +18,8 @@ from geometry_msgs.msg import Twist
 from std_msgs.msg import String
 from std_msgs.msg import Bool 
 getTime = lambda: int(round(time.time()))
-
+global box 
+box = False
 
 
 DEBUG = True
@@ -43,7 +44,6 @@ class Subconcious:
 			self.rule = 1
 			print "Im robot 1"
 			os.system("rm ./know/take_photo.py")
-			os.system("rm ./know/move_around.py")
 		#if Im robot 2
 		elif sys.argv[1].count ("1")>0:
 			print "Im robot 2"
@@ -75,6 +75,7 @@ class Subconcious:
 		self.finish = rospy.Publisher(sys.argv[1]+ "/working" , Bool)
 
 		rospy.Subscriber ("/knowledge", String, self.receive_knowledge)
+		rospy.Subscriber ("/box", String, self.isbox)
 		rospy.Subscriber ("/ask_knowledge", String, self.handle_requests)
 		rospy.Subscriber (sys.argv[1] + "/working", Bool, self.worker_process)
 
@@ -120,6 +121,9 @@ class Subconcious:
 			cont += 1
 			if not self.working:
 				if (self.rule == 1):
+					global box
+					if box:
+						self.run("move_around")
 					self.run ("patrol")
 				elif (self.rule == 2):
 					self.run ("follower")
@@ -232,6 +236,9 @@ class Subconcious:
 			know = Knowledge ( nome, topicos, descricao, modelo , endereco, atributos,dependencias, tipoDeTarefa )
 			self.knowledge.append(know)
 
+	def isbox(self, knowledge):
+		global box
+		box = True
 	def receive_knowledge(self, knowledge):
 		''' Callback: It receives knowledges from topic and save it in files - Recebe conhecimento e o salva em arquivos'''
 		data = str(knowledge.data).split("\n")
